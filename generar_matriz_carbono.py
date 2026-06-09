@@ -133,8 +133,9 @@ lim_fields = [
     ("FE maquinaria/combustión", "IPCC 2006 / GHG Protocol"),
     ("FE ganadería", "IPCC 2006 Tier 1/2"),
     ("FE electricidad", "Factor Red Argentina (CAMMESA)"),
-    ("Factor red eléctrica (kg CO2e/kWh)", "0,383"),
-    ("PRG CH4 — 100 años (AR6)", "29,8"),
+    ("Factor red eléctrica (kg CO2e/kWh)", "0,383 (CAMMESA 2023 — verificar valor vigente cada año)"),
+    ("PRG CH4 fósil — 100 años (AR6)", "29,8 (combustión gasoil/GLP)"),
+    ("PRG CH4 biogénico — 100 años (AR6)", "27,2 (ganadería/efluentes)"),
     ("PRG N2O — 100 años (AR6)", "273"),
     ("Unidad de reporte", "tCO2e / año"),
     ("Versión del protocolo GHG", "Corporate Standard Rev. 2015"),
@@ -370,7 +371,7 @@ ws4.freeze_panes = 'A6'
 merge(ws4, 1, 1, 1, 14, "SCOPE 1 — GANADERÍA  |  Fermentación Entérica + Gestión de Estiércol", S1_D, sz=13)
 merge(ws4, 2, 1, 2, 14,
       "IPCC 2006 Vol.4 Cap.10/11  |  Tier 1 por defecto — upgradeble a Tier 2 con datos de peso y dieta  |  "
-      "PRG CH4 = 29,8  |  PRG N2O = 273  (AR6, 100 años)",
+      "PRG CH4 biogénico = 27,2  |  PRG N2O = 273  (AR6, 100 años)",
       S1_L, '000000', bold=False, sz=9)
 
 # Sección A — Fermentación Entérica
@@ -413,7 +414,7 @@ for i, (cat, sist, cabs, dias, ceq, pv, fe) in enumerate(categorias_gan):
     inp(ws4, r, 6, pv)
     ref(ws4, r, 7, fe)
     calc(ws4, r, 8, f"=E{r}*G{r}")
-    calc(ws4, r, 9, f"=H{r}*29.8")
+    calc(ws4, r, 9, f"=H{r}*27.2")
     inp(ws4, r, 10, None)
     lbl(ws4, r, 11, "L leche/día o kg carne/año", bg_r)
     inp(ws4, r, 12, None)
@@ -463,7 +464,7 @@ for i, (cat, sist, cabs, sistema, pct, temp, fe_ch4, fe_n2o) in enumerate(sistem
     ref(ws4, r, 8, fe_n2o)
     calc(ws4, r, 9, f"=C{r}*G{r}")
     calc(ws4, r, 10, f"=C{r}*H{r}")
-    calc(ws4, r, 11, f"=I{r}*29.8")
+    calc(ws4, r, 11, f"=I{r}*27.2")
     calc(ws4, r, 12, f"=J{r}*273")
     calc(ws4, r, 13, f"=(K{r}+L{r})/1000")
     inp(ws4, r, 14, None)
@@ -653,7 +654,7 @@ for i, (orig, sist, caudal, dias, vol, dbo_in, dbo_out, bo, mcf) in enumerate(ef
     ref(ws6, r, 9, mcf)
     # CH4 = Vol(m³) * (DBO_in - DBO_out) g/m³ /1000 kg/g * Bo * MCF
     calc(ws6, r, 10, f"=E{r}*(F{r}-G{r})/1000*H{r}*I{r}")
-    calc(ws6, r, 11, f"=J{r}*0.00067*1000*29.8")
+    calc(ws6, r, 11, f"=J{r}*0.00067*1000*27.2")
     calc(ws6, r, 12, f"=K{r}/1000")
 
 r_tot_efl = 9
@@ -714,7 +715,8 @@ ws7.freeze_panes = 'A5'
 
 merge(ws7, 1, 1, 1, 10, "SCOPE 2 — ELECTRICIDAD DE RED  |  Enfoque Basado en Localización", S2_D, sz=13)
 merge(ws7, 2, 1, 2, 10,
-      "GHG Protocol — Scope 2 Guidance (2015)  |  Factor de Emisión Red Argentina CAMMESA 2023: 0,383 kg CO2e/kWh  |  "
+      "GHG Protocol — Scope 2 Guidance (2015)  |  Factor de Emisión Red Argentina CAMMESA 2023: 0,383 kg CO2e/kWh "
+      "(⚠ verificar valor vigente del año del inventario en cammesaweb.cammesa.com)  |  "
       "20% del consumo eléctrico total es de red; 80% autogenerado (incluido en S1-2)",
       S2_L, '1F3864', bold=False, sz=9)
 
@@ -922,6 +924,7 @@ secciones_fe = [
     ("ELECTRICIDAD", [
         ("Red eléctrica Argentina (CAMMESA 2023)", "Scope 2 — factor de emisión localización", "kWh", "0,383", "—", "—", "CAMMESA — Factor de Emisión 2023"),
         ("Red eléctrica Argentina (CAMMESA 2022)", "Referencia histórica", "kWh", "0,404", "—", "—", "CAMMESA — Factor de Emisión 2022"),
+        ("⚠ Verificar vigencia anual", "Actualizar con el valor publicado del año del inventario", "kWh", "—", "—", "—", "cammesaweb.cammesa.com/download/factor-de-emision"),
     ]),
     ("GANADERÍA — FERMENTACIÓN ENTÉRICA (Tier 1, clima templado)", [
         ("Vacas lecheras (>200 L/día producción)", "Fermentación entérica", "cab/año", "119,8 kg CH4", "—", "—", "IPCC 2006 Tabla 10-11"),
@@ -942,7 +945,8 @@ secciones_fe = [
         ("Residuos de cultivos incorporados", "N2O indirecto", "kg N residuos", "0,01 kg N2O-N", "—", "—", "IPCC 2006 Tabla 11-1"),
     ]),
     ("POTENCIALES DE CALENTAMIENTO GLOBAL (AR6 — 100 años)", [
-        ("CH4 (metano)", "GWP base CO2", "kg CH4", "29,8 kg CO2e", "—", "—", "IPCC AR6 2021 Tabla 7.SM.7"),
+        ("CH4 fósil (combustión gasoil/GLP)", "GWP base CO2 — Hojas S1-1 y S1-2", "kg CH4", "29,8 kg CO2e", "—", "—", "IPCC AR6 2021 Tabla 7.SM.7"),
+        ("CH4 biogénico (ganadería/efluentes)", "GWP base CO2 — Hojas S1-3 y S1-5", "kg CH4", "27,2 kg CO2e", "—", "—", "IPCC AR6 2021 Tabla 7.SM.7"),
         ("N2O (óxido nitroso)", "GWP base CO2", "kg N2O", "273 kg CO2e", "—", "—", "IPCC AR6 2021 Tabla 7.SM.7"),
         ("CO2 (dióxido de carbono)", "GWP base CO2", "kg CO2", "1 kg CO2e", "—", "—", "Línea base"),
     ]),

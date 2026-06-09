@@ -22,14 +22,40 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ─── TEMA (oscuro / claro / según sistema) ────────────────────────────────────
+# st.context.theme.type refleja el tema realmente activo (incluye "Use system
+# setting" ya resuelto), así los gráficos y tarjetas custom se adaptan también
+# cuando el usuario cambia de tema desde el menú ⋮ de Streamlit.
+DARK = (st.context.theme.type or "dark") != "light"
+
+if DARK:
+    T = dict(
+        bg_app="#0E1117", bg_card="#161B27", bg_alt="#1A1F2E",
+        text="#FAFAFA", text_soft="#CCCCCC", text_muted="#888888", text_dim="#666666",
+        grid="#333333", border="rgba(255,255,255,0.08)",
+        card_grad=("rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"),
+        h3="#4FC3F7",
+        gauge_steps=["#1A0A0A", "#1A1A0A", "#0F1F0A", "#0A1A0A"],
+    )
+else:
+    T = dict(
+        bg_app="#FFFFFF", bg_card="#F0F2F6", bg_alt="#E6E9EF",
+        text="#0E1117", text_soft="#333333", text_muted="#666666", text_dim="#999999",
+        grid="#DDDDDD", border="rgba(0,0,0,0.08)",
+        card_grad=("rgba(0,0,0,0.03)", "rgba(0,0,0,0.01)"),
+        h3="#0070C0",
+        gauge_steps=["#FBE7E7", "#FBF3DC", "#E6F4E6", "#E0F0DC"],
+    )
+
 EXCEL_DEFAULT = os.path.expanduser("~/Downloads/Matriz_HuellaCarbono_Agropecuario.xlsx")
 
-PRG_CH4 = 29.8
+PRG_CH4_FOSIL = 29.8   # AR6 — CH4 fósil (combustión gasoil/GLP)
+PRG_CH4_BIO   = 27.2   # AR6 — CH4 biogénico (ganadería/efluentes)
 PRG_N2O = 273.0
 FE_GASOIL_MOV  = 2.701    # kg CO2/L — combustión móvil
 FE_GASOIL_EST  = 2.701    # kg CO2/L — combustión estacionaria
 FE_GLP         = 2.983    # kg CO2/kg GLP
-FE_RED_ARG     = 0.383    # kg CO2e/kWh — CAMMESA 2023
+FE_RED_ARG     = 0.383    # kg CO2e/kWh — CAMMESA 2023 (verificar valor vigente cada año en cammesaweb.cammesa.com)
 
 CAT_LABELS = {
     "maquinaria":   "Combustión Móvil",
@@ -82,7 +108,7 @@ def read_maquinaria(wb):
         lhora   = flt(ws.cell(r, 7).value)
         consumo = meses * horas * lhora
         co2     = consumo * FE_GASOIL_MOV
-        ch4     = consumo * 0.10 / 1000 * PRG_CH4
+        ch4     = consumo * 0.10 / 1000 * PRG_CH4_FOSIL
         n2o     = consumo * 0.60 / 1000 * PRG_N2O
         t       = (co2 + ch4 + n2o) / 1000
         rows.append({"nombre": str(nombre), "consumo_l": consumo, "tco2e": t})
@@ -127,7 +153,7 @@ def read_ganaderia(wb):
         dias = flt(ws.cell(r, 4).value)
         fe   = flt(ws.cell(r, 7).value) or FE_FERM_DEF[i]
         eq   = cabs * (dias / 365) if dias > 0 else cabs
-        t    = eq * fe * PRG_CH4 / 1000
+        t    = eq * fe * PRG_CH4_BIO / 1000
         if cabs > 0:
             ferm_rows.append({"categoria": CAT_FERM[i], "cabezas": int(cabs), "tco2e": t})
         ferm_total += t
@@ -137,7 +163,7 @@ def read_ganaderia(wb):
         cabs    = flt(ws.cell(r, 3).value)
         fe_ch4  = flt(ws.cell(r, 7).value) or FE_CH4_EST[i]
         fe_n2o  = flt(ws.cell(r, 8).value) or FE_N2O_EST[i]
-        est_total += (cabs * fe_ch4 * PRG_CH4 + cabs * fe_n2o * PRG_N2O) / 1000
+        est_total += (cabs * fe_ch4 * PRG_CH4_BIO + cabs * fe_n2o * PRG_N2O) / 1000
 
     return {
         "fermentacion_tco2e": ferm_total,
@@ -190,7 +216,7 @@ def read_efluentes(wb):
         mcf     = flt(ws.cell(r, 9).value) or 0.8
         vol     = caudal * dias
         ch4_m3  = vol * max(dbo_in - dbo_out, 0) / 1000 * bo * mcf
-        total  += ch4_m3 * 0.00067 * 1000 * PRG_CH4 / 1000
+        total  += ch4_m3 * 0.00067 * 1000 * PRG_CH4_BIO / 1000
     return total
 
 
@@ -299,40 +325,39 @@ def load_all(_mtime, path):
 
 
 # ─── ESTILOS CSS ──────────────────────────────────────────────────────────────
-st.markdown("""
+# Solo se estilizan las clases propias del dashboard (kpi-card, badges, etc.).
+# El resto de los componentes nativos de Streamlit se dejan en manos del tema
+# elegido por el usuario (oscuro / claro / según sistema) para que ambos modos
+# se vean consistentes.
+st.markdown(f"""
 <style>
-  /* Fondo general */
-  .stApp { background-color: #0E1117; }
-  section[data-testid="stSidebar"] { background-color: #161B27 !important; }
-
   /* Cards KPI */
-  .kpi-card {
-    background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  .kpi-card {{
+    background: linear-gradient(135deg, {T['card_grad'][0]}, {T['card_grad'][1]});
     border-radius: 10px;
     padding: 18px 16px 14px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid {T['border']};
     transition: transform 0.15s;
-  }
-  .kpi-card:hover { transform: translateY(-2px); }
-  .kpi-label { color: #888; font-size: 11px; font-weight: 600;
-               text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
-  .kpi-value { font-size: 30px; font-weight: 800; line-height: 1.1; }
-  .kpi-unit  { color: #666; font-size: 11px; margin-top: 4px; }
-  .kpi-icon  { font-size: 20px; margin-bottom: 4px; }
+  }}
+  .kpi-card:hover {{ transform: translateY(-2px); }}
+  .kpi-label {{ color: {T['text_muted']}; font-size: 11px; font-weight: 600;
+               text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }}
+  .kpi-value {{ font-size: 30px; font-weight: 800; line-height: 1.1; }}
+  .kpi-unit  {{ color: {T['text_dim']}; font-size: 11px; margin-top: 4px; }}
+  .kpi-icon  {{ font-size: 20px; margin-bottom: 4px; }}
 
   /* Badges de scope */
-  .badge { border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
-  .badge-s1  { background: #C0000033; color: #FF8888; border: 1px solid #C00000; }
-  .badge-s2  { background: #0070C033; color: #88BBFF; border: 1px solid #0070C0; }
-  .badge-sk  { background: #00B05033; color: #88EE88; border: 1px solid #00B050; }
+  .badge {{ border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 700; }}
+  .badge-s1  {{ background: #C0000033; color: #FF8888; border: 1px solid #C00000; }}
+  .badge-s2  {{ background: #0070C033; color: #88BBFF; border: 1px solid #0070C0; }}
+  .badge-sk  {{ background: #00B05033; color: #88EE88; border: 1px solid #00B050; }}
 
   /* Separador de sección */
-  .section-title { color: #81C784 !important; font-size: 14px !important; font-weight: 700 !important;
-                   text-transform: uppercase; letter-spacing: 2px; margin: 20px 0 8px 0; }
-  h1 { color: #00B050 !important; }
-  h3 { color: #4FC3F7 !important; }
-  .stAlert { background: #1A1F2E !important; }
+  .section-title {{ color: #81C784 !important; font-size: 14px !important; font-weight: 700 !important;
+                   text-transform: uppercase; letter-spacing: 2px; margin: 20px 0 8px 0; }}
+  h1 {{ color: #00B050 !important; }}
+  h3 {{ color: {T['h3']} !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -346,7 +371,7 @@ with st.sidebar:
 
     auto_on = st.toggle("🔄 Auto-actualizar al guardar Excel", value=True)
 
-    if st.button("⚡ Actualizar ahora", type="primary", use_container_width=True):
+    if st.button("⚡ Actualizar ahora", type="primary", width="stretch"):
         st.cache_data.clear()
         st.rerun()
 
@@ -377,7 +402,8 @@ with st.sidebar:
 
 ---
 📋 GHG Protocol + ISO 14064-1
-🧮 IPCC 2006 | CAMMESA 2023 | AR6
+🧮 IPCC 2006 | AR6 (CH4 fósil 29,8 / biogénico 27,2)
+⚡ Factor CAMMESA 0,383 (2023) — verificar valor vigente cada año
 """)
 
 
@@ -423,9 +449,9 @@ with col_h1:
 with col_h2:
     last_upd = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
     st.markdown(f"""
-    <div style="background:#161B27;border-radius:8px;padding:12px 16px;text-align:right;margin-top:8px;">
-        <span style="color:#666;font-size:11px;">Última lectura del archivo</span><br>
-        <span style="color:#4FC3F7;font-weight:700;">{last_upd}</span>
+    <div style="background:{T['bg_card']};border-radius:8px;padding:12px 16px;text-align:right;margin-top:8px;">
+        <span style="color:{T['text_dim']};font-size:11px;">Última lectura del archivo</span><br>
+        <span style="color:{T['h3']};font-weight:700;">{last_upd}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -454,7 +480,7 @@ with c3:
 with c4:
     st.markdown(kpi_card("🌳", "Capturas Sumideros", fmt_t(data['total_s']), "tCO₂e / año", "#00B050"), unsafe_allow_html=True)
 with c5:
-    net_col   = "#00B050" if neto < 0 else ("#ED7D31" if total_e > 0 else "#666")
+    net_col   = "#00B050" if neto < 0 else ("#ED7D31" if total_e > 0 else T['text_muted'])
     net_label = "tCO₂e neto / año"
     st.markdown(kpi_card("⚖️", "Huella Neta", fmt_t(neto), net_label, net_col), unsafe_allow_html=True)
 
@@ -474,23 +500,23 @@ with col_pie:
             labels=labels, values=values, hole=0.58,
             marker=dict(colors=COLORS_PIE[:len(labels)]),
             textinfo="label+percent",
-            textfont=dict(size=11, color="#DDD"),
+            textfont=dict(size=11, color=T['text_soft']),
             hovertemplate="<b>%{label}</b><br>%{value:.2f} tCO₂e<br>%{percent}<extra></extra>",
             direction="clockwise",
         ))
         fig_pie.add_annotation(
             x=0.5, y=0.5, showarrow=False,
             text=f"<b>{total_e:.1f}</b><br><span style='font-size:11px'>tCO₂e</span>",
-            font=dict(size=17, color="#FFFFFF"),
+            font=dict(size=17, color=T['text']),
         )
         fig_pie.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#CCC"),
+            font=dict(color=T['text_soft']),
             legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=11)),
             margin=dict(l=10, r=10, t=20, b=10),
             height=330,
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width="stretch")
     else:
         st.info("Completar datos en la Matriz Excel para ver la distribución de emisiones.")
 
@@ -504,17 +530,17 @@ with col_gauge:
         value=pct_neutralized,
         number={"suffix": "%", "font": {"size": 38, "color": COLOR_SK}},
         title={"text": "Emisiones neutralizadas<br>por sumideros propios",
-               "font": {"color": "#AAAAAA", "size": 12}},
+               "font": {"color": T['text_muted'], "size": 12}},
         gauge={
-            "axis": {"range": [0, 100], "tickfont": {"color": "#777"}, "tickcolor": "#777"},
+            "axis": {"range": [0, 100], "tickfont": {"color": T['text_muted']}, "tickcolor": T['text_muted']},
             "bar":  {"color": COLOR_SK, "thickness": 0.3},
-            "bgcolor": "#1A1F2E",
-            "bordercolor": "#333",
+            "bgcolor": T['bg_alt'],
+            "bordercolor": T['grid'],
             "steps": [
-                {"range": [0,  25], "color": "#1A0A0A"},
-                {"range": [25, 50], "color": "#1A1A0A"},
-                {"range": [50, 75], "color": "#0F1F0A"},
-                {"range": [75,100], "color": "#0A1A0A"},
+                {"range": [0,  25], "color": T['gauge_steps'][0]},
+                {"range": [25, 50], "color": T['gauge_steps'][1]},
+                {"range": [50, 75], "color": T['gauge_steps'][2]},
+                {"range": [75,100], "color": T['gauge_steps'][3]},
             ],
             "threshold": {"line": {"color": "#FFD700", "width": 3},
                           "thickness": 0.8, "value": 100},
@@ -522,18 +548,18 @@ with col_gauge:
     ))
     fig_g.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#CCC"),
+        font=dict(color=T['text_soft']),
         height=260,
         margin=dict(l=20, r=20, t=50, b=10),
     )
-    st.plotly_chart(fig_g, use_container_width=True)
+    st.plotly_chart(fig_g, width="stretch")
 
     sk = data["sinks"]
     st.markdown(f"""
-    <div style="background:#161B27;border-radius:8px;padding:12px 16px;font-size:13px;">
+    <div style="background:{T['bg_card']};border-radius:8px;padding:12px 16px;font-size:13px;">
         🌲 Monte nativo: <b style="color:#81C784;">{fmt_t(sk['monte_tco2e'])} tCO₂e</b><br>
         🌾 Pasturas: <b style="color:#81C784;">{fmt_t(sk['pasturas_tco2e'])} tCO₂e</b><br>
-        <hr style="border-color:#333;margin:8px 0;">
+        <hr style="border-color:{T['grid']};margin:8px 0;">
         ⚖️ Huella neta: <b style="color:{net_col};">{fmt_t(neto)} tCO₂e</b>
     </div>
     """, unsafe_allow_html=True)
@@ -562,19 +588,19 @@ with col_bars:
             ),
             text=[f" {v:.2f} t" for v in df_s1["tCO2e"]],
             textposition="outside",
-            textfont=dict(color="#CCC", size=11),
+            textfont=dict(color=T['text_soft'], size=11),
             hovertemplate="<b>%{y}</b><br>%{x:.3f} tCO₂e<extra></extra>",
         ))
         fig_bar.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(gridcolor="#333", color="#888", title="tCO₂e / año",
-                       zeroline=True, zerolinecolor="#555"),
-            yaxis=dict(color="#CCC"),
-            font=dict(color="#CCC"),
+            xaxis=dict(gridcolor=T['grid'], color=T['text_muted'], title="tCO₂e / año",
+                       zeroline=True, zerolinecolor=T['grid']),
+            yaxis=dict(color=T['text_soft']),
+            font=dict(color=T['text_soft']),
             margin=dict(l=10, r=70, t=10, b=40),
             height=300,
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width="stretch")
     else:
         st.info("Sin datos de Scope 1 todavía.")
 
@@ -591,9 +617,9 @@ with col_kpis:
     ]
     for label, val, color in kpis_data:
         st.markdown(f"""
-        <div style="background:#161B27;border-left:3px solid {color};border-radius:0 6px 6px 0;
+        <div style="background:{T['bg_card']};border-left:3px solid {color};border-radius:0 6px 6px 0;
                     padding:9px 14px;margin:5px 0;">
-            <span style="color:#888;font-size:11px;">{label}</span><br>
+            <span style="color:{T['text_muted']};font-size:11px;">{label}</span><br>
             <span style="color:{color};font-size:20px;font-weight:700;">{val}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -618,18 +644,18 @@ if df_elec["kwh"].sum() > 0:
         marker=dict(size=7, color="#FF9900"),
         hovertemplate="%{x}<br>tCO₂e: %{y:.3f}<extra></extra>",
     ), secondary_y=True)
-    fig_elec.update_xaxes(color="#888", gridcolor="#333")
-    fig_elec.update_yaxes(title_text="kWh",   secondary_y=False, color="#4FC3F7", gridcolor="#333")
+    fig_elec.update_xaxes(color=T['text_muted'], gridcolor=T['grid'])
+    fig_elec.update_yaxes(title_text="kWh",   secondary_y=False, color=T['h3'], gridcolor=T['grid'])
     fig_elec.update_yaxes(title_text="tCO₂e", secondary_y=True,  color="#FF9900", gridcolor="rgba(0,0,0,0)")
     fig_elec.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#CCC"),
+        font=dict(color=T['text_soft']),
         legend=dict(orientation="h", y=-0.25, font=dict(size=11)),
         margin=dict(l=60, r=60, t=10, b=60),
         height=280,
         hovermode="x unified",
     )
-    st.plotly_chart(fig_elec, use_container_width=True)
+    st.plotly_chart(fig_elec, width="stretch")
 
     total_kwh  = df_elec["kwh"].sum()
     total_elec = df_elec["tco2e"].sum()
@@ -658,18 +684,18 @@ if gan["ferm_detail"]:
             marker_color="#E05050",
             text=[f"{v:.2f}" for v in df_gan["tco2e"]],
             textposition="outside",
-            textfont=dict(color="#CCC", size=10),
+            textfont=dict(color=T['text_soft'], size=10),
             hovertemplate="<b>%{x}</b><br>%{y:.3f} tCO₂e<extra></extra>",
         ))
         fig_gan.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(color="#CCC", tickangle=-25),
-            yaxis=dict(gridcolor="#333", color="#888", title="tCO₂e / año"),
-            font=dict(color="#CCC"),
+            xaxis=dict(color=T['text_soft'], tickangle=-25),
+            yaxis=dict(gridcolor=T['grid'], color=T['text_muted'], title="tCO₂e / año"),
+            font=dict(color=T['text_soft']),
             margin=dict(l=40, r=10, t=10, b=80),
             height=280,
         )
-        st.plotly_chart(fig_gan, use_container_width=True)
+        st.plotly_chart(fig_gan, width="stretch")
 
     with col_suelos:
         st.markdown('<p class="section-title">Suelos Agrícolas — N₂O + CO₂ Urea por Cultivo</p>',
@@ -682,18 +708,18 @@ if gan["ferm_detail"]:
                 marker_color="#FF8000",
                 text=[f"{v:.2f}" for v in df_suel["tco2e"]],
                 textposition="outside",
-                textfont=dict(color="#CCC", size=10),
+                textfont=dict(color=T['text_soft'], size=10),
                 hovertemplate="<b>%{x}</b><br>%{y:.3f} tCO₂e<extra></extra>",
             ))
             fig_suel.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(color="#CCC", tickangle=-25),
-                yaxis=dict(gridcolor="#333", color="#888", title="tCO₂e / año"),
-                font=dict(color="#CCC"),
+                xaxis=dict(color=T['text_soft'], tickangle=-25),
+                yaxis=dict(gridcolor=T['grid'], color=T['text_muted'], title="tCO₂e / año"),
+                font=dict(color=T['text_soft']),
                 margin=dict(l=40, r=10, t=10, b=80),
                 height=280,
             )
-            st.plotly_chart(fig_suel, use_container_width=True)
+            st.plotly_chart(fig_suel, width="stretch")
         else:
             st.info("Completar cultivos en la hoja S1-4 para ver este gráfico.")
 
@@ -741,7 +767,7 @@ rows_table.append({
 df_table = pd.DataFrame(rows_table)
 st.dataframe(
     df_table,
-    use_container_width=True,
+    width="stretch",
     hide_index=True,
     column_config={
         "tCO₂e / año": st.column_config.NumberColumn("tCO₂e / año", format="%.3f"),
@@ -754,7 +780,7 @@ st.divider()
 fc1, fc2, fc3, fc4 = st.columns(4)
 with fc1: st.caption("📋 GHG Protocol Corporate Standard")
 with fc2: st.caption("📏 ISO 14064-1:2018")
-with fc3: st.caption("🧮 IPCC 2006 | CAMMESA 2023 | AR6")
+with fc3: st.caption("🧮 IPCC 2006 | CAMMESA 2023 (verificar) | AR6 (CH4 fósil 29,8 / biogénico 27,2)")
 with fc4: st.caption(f"🕐 Última renderización: {datetime.now().strftime('%H:%M:%S')}")
 
 
