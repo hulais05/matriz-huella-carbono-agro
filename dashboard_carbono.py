@@ -47,7 +47,12 @@ else:
         gauge_steps=["#FBE7E7", "#FBF3DC", "#E6F4E6", "#E0F0DC"],
     )
 
-EXCEL_DEFAULT = os.path.expanduser("~/Downloads/Matriz_HuellaCarbono_Agropecuario.xlsx")
+# En uso local apunta al archivo de trabajo en Downloads. Si no existe (p.ej. en
+# Streamlit Cloud, donde no hay carpeta Downloads), usa la copia incluida en el
+# repo junto a este script para que la demo funcione igual.
+_LOCAL_EXCEL   = os.path.expanduser("~/Downloads/Matriz_HuellaCarbono_Agropecuario.xlsx")
+_BUNDLED_EXCEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Matriz_HuellaCarbono_Agropecuario.xlsx")
+EXCEL_DEFAULT  = _LOCAL_EXCEL if os.path.exists(_LOCAL_EXCEL) else _BUNDLED_EXCEL
 
 PRG_CH4_FOSIL = 29.8   # AR6 — CH4 fósil (combustión gasoil/GLP)
 PRG_CH4_BIO   = 27.2   # AR6 — CH4 biogénico (ganadería/efluentes)

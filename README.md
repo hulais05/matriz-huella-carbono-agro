@@ -2,6 +2,17 @@
 
 Sistema para relevar datos y calcular la huella de carbono corporativa de un establecimiento agropecuario (agricultura + ganadería), con un dashboard interactivo que se actualiza automáticamente a medida que se completa la planilla Excel.
 
+🔗 **Demo en vivo:** _(pendiente de publicar — ver sección "Despliegue")_
+
+## Despliegue (Streamlit Community Cloud)
+
+Para compartir el dashboard con clientes mediante un enlace público y permanente:
+
+1. Ingresar a [share.streamlit.io](https://share.streamlit.io) con la cuenta de GitHub.
+2. "New app" → seleccionar el repo `hulais05/matriz-huella-carbono-agro`, branch `main`, archivo principal `dashboard_carbono.py`.
+3. Deploy. Streamlit Cloud queda con una URL fija (ej. `https://matriz-huella-carbono-agro.streamlit.app`) que se actualiza sola con cada `git push`.
+4. En la nube no existe la carpeta `~/Downloads`, así que el dashboard usa automáticamente la planilla de ejemplo incluida en el repo (`Matriz_HuellaCarbono_Agropecuario.xlsx`).
+
 ## Contenido del repositorio
 
 | Archivo | Descripción |
