@@ -26,8 +26,15 @@ BG_CARD = "#262730" if DARK else "#F0F2F6"
 
 C_S1, C_S2, C_S3, C_BIO = "#C00000", "#0070C0", "#7030A0", "#548235"
 
-EXCEL_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             "Matriz_HuellaCarbono_Vitivinicola.xlsx")
+# Orden de búsqueda: copia "viva" en Downloads (trabajo local con un cliente),
+# luego el EJEMPLO del repo (Streamlit Cloud / demo), luego la planilla en blanco.
+_REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+_CANDIDATOS = [
+    os.path.expanduser("~/Downloads/Matriz_HuellaCarbono_Vitivinicola.xlsx"),
+    os.path.join(_REPO_DIR, "Matriz_HuellaCarbono_Vitivinicola_EJEMPLO.xlsx"),
+    os.path.join(_REPO_DIR, "Matriz_HuellaCarbono_Vitivinicola.xlsx"),
+]
+EXCEL_DEFAULT = next((p for p in _CANDIDATOS if os.path.exists(p)), _CANDIDATOS[1])
 
 # ─── Factores (espejo de la planilla — FACTORES EMISION) ────────────────────
 FE_GASOIL, FE_NAFTA, FE_GN, FE_GLP = 2.68, 2.31, 2.04, 3.02
