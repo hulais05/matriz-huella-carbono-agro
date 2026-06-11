@@ -1,6 +1,25 @@
-# Matriz de Huella de Carbono — Sector Agropecuario
+# Matriz de Huella de Carbono — Agropecuario + Vitivinícola
 
-Sistema para relevar datos y calcular la huella de carbono corporativa de un establecimiento agropecuario (agricultura + ganadería), con un dashboard interactivo que se actualiza automáticamente a medida que se completa la planilla Excel.
+Sistema para relevar datos y calcular la huella de carbono corporativa, con un dashboard interactivo que se actualiza automáticamente a medida que se completa la planilla Excel. Incluye dos variantes:
+
+| Variante | Planilla | Dashboard | Alcances |
+|---|---|---|---|
+| **Agropecuaria** (agricultura + ganadería) | `Matriz_HuellaCarbono_Agropecuario.xlsx` | `dashboard_carbono.py` | 1 + 2 + sumideros |
+| **Vitivinícola** (viñedo + bodega) | `Matriz_HuellaCarbono_Vitivinicola.xlsx` | `dashboard_vino.py` | 1 + 2 + 3 |
+
+## Variante Vitivinícola
+
+Adaptada al protocolo **OIV de gases de efecto invernadero** (sector vid y vino), además de GHG Protocol e ISO 14064-1:2018. Generador: `generar_matriz_carbono_vino.py`. Incluye `Matriz_HuellaCarbono_Vitivinicola_EJEMPLO.xlsx` con una bodega tipo de 240.000 botellas/año ya cargada (total 346 tCO2e/año → 1,44 kg CO2e/botella, dentro del benchmark bibliográfico de 0,9–1,9).
+
+**Scope 1**: combustión móvil (tractores de viñedo, pulverizadora), combustión estacionaria, N2O de fertilización y enmiendas, **refrigerantes** (fugas del frío de bodega, GWP AR6).
+
+**Scope 2**: electricidad de red (CAMMESA).
+
+**Scope 3** (lo dominante en vino): **botellas de vidrio** (FE 1,2 kg CO2e/kg, ajustado por % de vidrio reciclado — Glass Alliance Europe), cierres (corcho 1,83 g / sintético 14,8 g / tapa rosca 37,2 g CO2e por unidad — estudio PwC para Amorim), cápsulas, etiquetas, cajas, insumos upstream y transporte/exportación.
+
+**CO2 de fermentación**: biogénico (~0,098 kg CO2/L, vino 13% vol). Se cuantifica y reporta **por separado, fuera del total**, conforme al criterio OIV/FIVS.
+
+**Intensidad por botella**: indicador organizacional (total ÷ botellas producidas). No es una huella de producto certificable ISO 14067 — la planilla lo declara explícitamente.
 
 🔗 **Demo en vivo:** _(pendiente de publicar — ver sección "Despliegue")_
 
